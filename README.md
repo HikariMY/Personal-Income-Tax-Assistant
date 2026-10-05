@@ -40,7 +40,7 @@ data/*.md ─► load + clean (NFC, PyThaiNLP normalize, ลบ zero-width) ─�
 | Embedding & Vector Search | Sentence embedding ด้วย `intfloat/multilingual-e5-small` (รองรับไทยและอังกฤษ ขนาดเล็กพอสำหรับ Streamlit Cloud) ใส่ prefix `query:`/`passage:` และ normalize vector แล้วค้นด้วย FAISS `IndexFlatIP` (cosine similarity) | `rag/retriever.py` |
 | Prompt Engineering | System prompt กำหนดให้ตอบจาก CONTEXT เท่านั้น อ้างอิง `[n]` ตอบ "ไม่พบข้อมูลในเอกสาร" เมื่อไม่มีคำตอบ ตอบภาษาเดียวกับคำถาม และกัน prompt injection มี prompt เขียนคำถามใหม่ (query rewriting) สำหรับคำถามต่อเนื่อง และใช้ score threshold เป็นด่านแรก | `rag/prompts.py` |
 | Large Language Model | Groq API (`openai/gpt-oss-120b`, เลือก `qwen/qwen3.8-27b` หรือ `openai/gpt-oss-20b` ได้ใน sidebar โดย gpt-oss-20b ใช้เขียนคำถามใหม่ด้วย ทั้ง 3 ตัวผ่าน eval 13/13), temperature 0.1, reasoning_effort low, แปลง citation `【n】` เป็น `[n]`, จัดการ error เช่น rate limit, key ผิด, เชื่อมต่อไม่ได้ | `rag/llm.py` |
-| Chatbot Interface | `st.chat_message` / `st.chat_input` เก็บประวัติใน `st.session_state` คุยต่อเนื่องได้ ทุกคำตอบมี expander แสดงเอกสารอ้างอิง sidebar มีปุ่มคำถามตัวอย่าง ปรับ top-k เลือก model และล้างแชต | `app.py` |
+| Chatbot Interface | หน้าแรกเป็น hero + การ์ดคำถามยอดฮิต 6 ใบ (กดแล้วถามทันที), แชตต่อเนื่องด้วย `st.chat_message` / `st.session_state`, ทุกคำตอบมีกล่อง "ที่มาของคำตอบ" แสดงชื่อหัวข้อเอกสาร ระดับความเกี่ยวข้อง (ตรงมาก/เกี่ยวข้อง) และข้อความต้นฉบับ, คำตอบ "ไม่พบข้อมูล" มีคำแนะนำต่อ, ตั้งค่าขั้นสูง (top-k, model) ซ่อนไว้ใน sidebar | `app.py`, `ui/` |
 
 ---
 
@@ -48,6 +48,9 @@ data/*.md ─► load + clean (NFC, PyThaiNLP normalize, ลบ zero-width) ─�
 
 ```
 app.py                        # Streamlit app หลัก
+ui/styles.py                  # ธีม CSS (กรมท่า / ม่วง / เขียว) อิงแบบ Figma Brainwave + Botly
+ui/components.py              # hero, การ์ดคำถาม, กล่องที่มาของคำตอบ
+.streamlit/config.toml        # ธีมสี และปิด file watcher
 rag/loader.py                 # โหลด ทำความสะอาด และแบ่ง chunk
 rag/retriever.py              # Embedding + FAISS
 rag/prompts.py                # System prompt / prompt templates
@@ -161,7 +164,15 @@ User message ที่ส่งให้ LLM จะประกอบด้ว�
 | Retrieval hit@4 (ไฟล์ที่ถูกต้องอยู่ใน 4 chunk แรก) | 10/10 (100%) |
 | ตอบ / ไม่พบข้อมูล ถูกต้อง (คำถามที่ไม่มีคำตอบ 3 ข้อตอบ "ไม่พบข้อมูลในเอกสาร" ครบ) | 13/13 (100%) |
 
-## 9. ข้อจำกัด
+## 9. การออกแบบหน้าจอ (UI)
+
+ออกแบบโดยอ้างอิง Figma community kit 2 ชุด คือ **Brainwave.io Landing Page** (hero สีกรมท่า, การ์ด feature มีไอคอน) และ **Botly AI Chatbot Dashboard** (sidebar สีเข้ม, การ์ดมุมโค้ง)
+- โทนสี: กรมท่า `#14163A` (hero / sidebar) · ม่วง `#5B47F0` (ปุ่มหลัก) · เขียว `#22C55E` (สีเน้น)
+- ฟอนต์ IBM Plex Sans Thai และไอคอน Material Symbols แทน emoji
+- ใช้ภาษาที่คนทั่วไปเข้าใจ ส่วนรายละเอียดทางเทคนิคย้ายไปไว้ใน "ตั้งค่าขั้นสูง"
+- รองรับมือถือ: การ์ดเรียงเป็นคอลัมน์เดียว และ sidebar หุบอัตโนมัติ
+
+## 10. ข้อจำกัด
 - ข้อมูลอ้างอิงปีภาษี 2567 กฎหมายและมาตรการลดหย่อนเปลี่ยนแปลงทุกปี
 - คำถามที่อยู่ใกล้ domain (เช่น VAT) จะได้ similarity สูงกว่า threshold ระบบจึงอาศัย prompt ให้ LLM ตอบ "ไม่พบข้อมูล"
 - Cold start บน Streamlit Cloud ใช้เวลาประมาณ 1–2 นาที เพราะต้องดาวน์โหลด embedding model

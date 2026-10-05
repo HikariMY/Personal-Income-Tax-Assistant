@@ -11,24 +11,31 @@ from rag.llm import AVAILABLE_MODELS, LLMError, answer, rewrite_query
 from rag.loader import build_chunks, load_documents
 from rag.prompts import NOT_FOUND
 from rag.retriever import SearchResult, VectorStore, load_embedder
+from ui.components import (
+    ERROR_MESSAGE,
+    compact_header,
+    hero,
+    render_assistant,
+    sidebar_brand,
+    sidebar_help,
+    topic_cards,
+)
+from ui.styles import inject_css
 
 DATA_DIR = Path(__file__).parent / "data"
 DEFAULT_TOP_K = 4
 # Cosine score below which the question is treated as off-topic (calibrated with eval.py).
 SCORE_THRESHOLD = 0.83
 
-EXAMPLE_QUESTIONS = [
-    "ค่าลดหย่อนส่วนตัวได้เท่าไร",
-    "เงินเดือน 30,000 บาท ต้องเสียภาษีเท่าไร",
-    "ซื้อ RMF ลดหย่อนได้สูงสุดเท่าไร",
-    "ยื่นภาษีออนไลน์ได้ถึงวันไหน",
-    "What is the personal allowance in Thailand?",
-]
-
-st.set_page_config(page_title="TaxBuddy — ผู้ช่วยภาษีเงินได้", page_icon="🧾", layout="centered")
+st.set_page_config(
+    page_title="TaxBuddy · ผู้ช่วยภาษีเงินได้",
+    page_icon="🧾",
+    layout="centered",
+    initial_sidebar_state="auto",
+)
 
 
-@st.cache_resource(show_spinner="กำลังโหลดเอกสารและสร้าง Vector Index ...")
+@st.cache_resource(show_spinner="กำลังเตรียมข้อมูลภาษี ครั้งแรกอาจใช้เวลาประมาณ 1 นาที ...")
 def get_store() -> VectorStore:
     chunks = build_chunks(load_documents(DATA_DIR))
     return VectorStore(chunks, load_embedder())
@@ -40,18 +47,15 @@ def get_client() -> Groq | None:
     return Groq(api_key=api_key) if api_key else None
 
 
-def render_sources(sources: list[dict]) -> None:
-    if not sources:
-        return
-    with st.expander(f"📚 เอกสารอ้างอิง ({len(sources)})"):
-        for i, src in enumerate(sources, start=1):
-            st.markdown(f"**[{i}] {src['file']} › {src['heading']}**  \n`score {src['score']:.3f}`")
-            st.caption(src["text"])
-
-
 def to_source_dicts(results: list[SearchResult]) -> list[dict]:
     return [
-        {"file": r.chunk.file, "heading": r.chunk.heading, "text": r.chunk.text, "score": r.score}
+        {
+            "title": r.chunk.title,
+            "heading": r.chunk.heading,
+            "file": r.chunk.file,
+            "text": r.chunk.text,
+            "score": r.score,
+        }
         for r in results
     ]
 
@@ -60,72 +64,81 @@ def generate_reply(client: Groq, store: VectorStore, question: str, top_k: int, 
     history = st.session_state.messages[:-1]  # exclude the question just appended
     search_query = rewrite_query(client, question, history)
     results = store.search(search_query, k=top_k)
+    reply = {
+        "role": "assistant",
+        "sources": to_source_dicts(results),
+        "query": search_query if search_query != question else None,
+    }
     if not results or results[0].score < SCORE_THRESHOLD:
-        return {"content": NOT_FOUND, "sources": to_source_dicts(results), "query": search_query}
-    reply = answer(client, question, results, history, model=model)
-    return {"content": reply, "sources": to_source_dicts(results), "query": search_query}
+        return {**reply, "content": NOT_FOUND}
+    return {**reply, "content": answer(client, question, results, history, model=model)}
 
 
 def sidebar() -> tuple[int, str]:
     with st.sidebar:
-        st.header("🧾 TaxBuddy")
-        st.write(
-            "แชตบอตตอบคำถาม **ภาษีเงินได้บุคคลธรรมดา (ปีภาษี 2567)** "
-            "จากคลังเอกสาร 15 ไฟล์ ด้วยเทคนิค RAG"
-        )
-        st.caption("Embedding: multilingual-e5-small · Vector DB: FAISS · LLM: Groq")
-        top_k = st.slider("จำนวนเอกสารอ้างอิง (top-k)", 1, 8, DEFAULT_TOP_K)
-        model = st.selectbox("LLM model", AVAILABLE_MODELS)
-        st.subheader("คำถามตัวอย่าง")
-        for q in EXAMPLE_QUESTIONS:
-            if st.button(q, use_container_width=True):
-                st.session_state.pending = q
-        if st.button("🗑️ ล้างการสนทนา", use_container_width=True):
+        sidebar_brand()
+        if st.button("เริ่มแชตใหม่", icon=":material/add_comment:", type="primary", width="stretch"):
             st.session_state.messages = []
             st.rerun()
         st.divider()
-        st.caption("⚠️ ข้อมูลเพื่อการศึกษา ควรตรวจสอบกับกรมสรรพากร (rd.go.th / 1161) ก่อนยื่นภาษีจริง")
+        sidebar_help()
+        st.divider()
+        with st.expander("ตั้งค่าขั้นสูง (สำหรับนักพัฒนา)", icon=":material/tune:"):
+            top_k = st.slider("จำนวนเอกสารที่ใช้ค้นหา (top-k)", 1, 8, DEFAULT_TOP_K)
+            model = st.selectbox("LLM model", AVAILABLE_MODELS)
+            st.caption("RAG: PyThaiNLP chunking · multilingual-e5-small · FAISS · Groq")
+        st.caption("ข้อมูลเพื่อการศึกษา ก่อนยื่นจริงควรตรวจสอบกับกรมสรรพากร (rd.go.th / 1161)")
     return top_k, model
 
 
-def main() -> None:
-    st.title("🧾 TaxBuddy")
-    st.caption("ผู้ช่วยตอบคำถามภาษีเงินได้บุคคลธรรมดา · ถามได้ทั้งภาษาไทยและภาษาอังกฤษ")
+def render_message(message: dict) -> None:
+    with st.chat_message(message["role"]):
+        if message["role"] == "user":
+            st.markdown(message["content"])
+        else:
+            render_assistant(message)
 
+
+def ask(client: Groq, store: VectorStore, question: str, top_k: int, model: str) -> None:
+    st.session_state.messages.append({"role": "user", "content": question})
+    render_message(st.session_state.messages[-1])
+    with st.chat_message("assistant"):
+        with st.spinner("กำลังหาคำตอบจากเอกสาร ..."):
+            try:
+                reply = generate_reply(client, store, question, top_k, model)
+            except LLMError as exc:
+                reply = {"role": "assistant", "content": ERROR_MESSAGE, "error": str(exc), "sources": []}
+        render_assistant(reply)
+    st.session_state.messages.append(reply)
+
+
+def main() -> None:
+    inject_css()
     st.session_state.setdefault("messages", [])
     top_k, model = sidebar()
 
     client = get_client()
     if client is None:
-        st.error("ไม่พบ GROQ_API_KEY กรุณาตั้งค่าใน Streamlit Secrets (.streamlit/secrets.toml)")
+        st.error("ยังไม่ได้ตั้งค่า GROQ_API_KEY ใน Streamlit Secrets", icon=":material/key_off:")
         st.stop()
     store = get_store()
 
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-            render_sources(msg.get("sources", []))
+    welcome = st.empty()
+    picked = None
+    if st.session_state.messages:
+        compact_header()
+    else:
+        with welcome.container():
+            hero()
+            picked = topic_cards()
 
-    question = st.chat_input("พิมพ์คำถามเกี่ยวกับภาษีเงินได้ ...") or st.session_state.pop("pending", None)
-    if not question:
-        return
+    for message in st.session_state.messages:
+        render_message(message)
 
-    st.session_state.messages.append({"role": "user", "content": question})
-    with st.chat_message("user"):
-        st.markdown(question)
-
-    with st.chat_message("assistant"):
-        with st.spinner("กำลังค้นเอกสารและสร้างคำตอบ ..."):
-            try:
-                reply = generate_reply(client, store, question, top_k, model)
-            except LLMError as exc:
-                reply = {"content": f"⚠️ {exc}", "sources": []}
-        st.markdown(reply["content"])
-        if reply.get("query") and reply["query"] != question:
-            st.caption(f"🔎 คำค้นที่ใช้: {reply['query']}")
-        render_sources(reply["sources"])
-
-    st.session_state.messages.append({"role": "assistant", **reply})
+    question = st.chat_input("พิมพ์คำถาม เช่น ลดหย่อนประกันชีวิตได้เท่าไร") or picked
+    if question:
+        welcome.empty()
+        ask(client, store, question, top_k, model)
 
 
 main()
