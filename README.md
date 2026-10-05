@@ -4,6 +4,7 @@ Web Application แชตบอตที่ตอบคำถามเรื่�
 
 - **Streamlit App:** https://personal-income-tax-assistant-nlp.streamlit.app/
 - **GitHub:** https://github.com/HikariMY/Personal-Income-Tax-Assistant
+- **ภาพหน้าจอการทำงานพร้อมคำอธิบาย:** [TaxBuddy_Screenshots.pdf](TaxBuddy_Screenshots.pdf)
 
 ---
 
@@ -59,6 +60,8 @@ data/                         # เอกสารความรู้ 15 ไ�
 test_questions.csv            # คำถามทดสอบ 13 ข้อ (ไม่มีคำตอบ 3 ข้อ)
 eval.py                       # สคริปต์ประเมินผลด้วย test_questions.csv
 tests/                        # pytest unit tests
+screenshots/                  # ภาพหน้าจอที่ใช้ใน PDF
+TaxBuddy_Screenshots.pdf      # รายงานภาพหน้าจอพร้อมคำอธิบาย
 requirements.txt
 .streamlit/secrets.toml.example
 ```
