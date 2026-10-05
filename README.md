@@ -171,7 +171,7 @@ User message ที่ส่งให้ LLM จะประกอบด้ว�
 
 ออกแบบโดยอ้างอิง Figma community kit 2 ชุด คือ **Brainwave.io Landing Page** (hero สีกรมท่า, การ์ด feature มีไอคอน) และ **Botly AI Chatbot Dashboard** (sidebar สีเข้ม, การ์ดมุมโค้ง)
 - โทนสี: กรมท่า `#14163A` (hero / sidebar) · ม่วง `#5B47F0` (ปุ่มหลัก) · เขียว `#22C55E` (สีเน้น)
-- ฟอนต์ IBM Plex Sans Thai และไอคอน Material Symbols แทน emoji
+- ฟอนต์ Mali (Google Fonts) และไอคอน Material Symbols แทน emoji
 - ใช้ภาษาที่คนทั่วไปเข้าใจ ส่วนรายละเอียดทางเทคนิคย้ายไปไว้ใน "ตั้งค่าขั้นสูง"
 - รองรับมือถือ: การ์ดเรียงเป็นคอลัมน์เดียว และ sidebar หุบอัตโนมัติ
 

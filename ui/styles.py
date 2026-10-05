@@ -18,7 +18,7 @@ GREEN = "#22C55E"
 GREEN_SOFT = "#E7F8EE"
 BORDER = "#E4E7F2"
 SHADOW = "0 8px 24px rgba(20, 22, 58, 0.06)"
-FONT = "'IBM Plex Sans Thai', 'Sarabun', sans-serif"
+FONT = "'Mali', 'IBM Plex Sans Thai', sans-serif"
 TOPIC_COUNT = 6
 
 # (icon colour, tile background) per topic card, cycling purple / green / navy.
@@ -26,10 +26,10 @@ ICON_TILES = ((PURPLE, PURPLE_SOFT), ("#16A34A", GREEN_SOFT), (NAVY_LIGHT, "#E8E
 
 _CSS = Template("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&display=swap');
 
 .stApp { background: #F5F7FB; }
-.stApp, .stApp p, .stApp li, .stApp label, .stApp input, .stApp textarea,
+.stApp, .stApp div, .stApp p, .stApp li, .stApp label, .stApp input, .stApp textarea,
 .stApp button, .stApp h1, .stApp h2, .stApp h3, .stApp summary { font-family: $font; }
 [data-testid="stHeader"] { background: transparent; }
 #MainMenu, footer { visibility: hidden; }
