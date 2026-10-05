@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Sequence
 
 from groq import APIConnectionError, APIStatusError, Groq, RateLimitError
@@ -9,10 +10,12 @@ from groq import APIConnectionError, APIStatusError, Groq, RateLimitError
 from rag.prompts import build_messages, build_rewrite_messages
 from rag.retriever import SearchResult
 
-DEFAULT_MODEL = "llama-3.3-70b-versatile"
-FALLBACK_MODEL = "llama-3.1-8b-instant"
+DEFAULT_MODEL = "openai/gpt-oss-120b"
+FALLBACK_MODEL = "openai/gpt-oss-20b"
 ANSWER_TEMPERATURE = 0.1
-MAX_ANSWER_TOKENS = 1024
+# gpt-oss models spend tokens on hidden reasoning first, so leave headroom.
+MAX_ANSWER_TOKENS = 4096
+MAX_REWRITE_TOKENS = 1024
 
 
 class LLMError(RuntimeError):
@@ -20,12 +23,14 @@ class LLMError(RuntimeError):
 
 
 def _chat(client: Groq, messages: list[dict], model: str, max_tokens: int) -> str:
+    extra = {"reasoning_effort": "low"} if model.startswith("openai/gpt-oss") else {}
     try:
         response = client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=ANSWER_TEMPERATURE,
             max_tokens=max_tokens,
+            **extra,
         )
     except RateLimitError as exc:
         raise LLMError("เรียกใช้ Groq API เกินโควตา กรุณารอสักครู่แล้วลองใหม่") from exc
@@ -43,7 +48,7 @@ def rewrite_query(client: Groq, question: str, history: Sequence[dict], model: s
     if not history:
         return question
     try:
-        rewritten = _chat(client, build_rewrite_messages(question, history), model, 200)
+        rewritten = _chat(client, build_rewrite_messages(question, history), model, MAX_REWRITE_TOKENS)
     except LLMError:
         return question
     return rewritten or question
@@ -56,4 +61,10 @@ def answer(
     history: Sequence[dict] = (),
     model: str = DEFAULT_MODEL,
 ) -> str:
-    return _chat(client, build_messages(question, results, history), model, MAX_ANSWER_TOKENS)
+    reply = _chat(client, build_messages(question, results, history), model, MAX_ANSWER_TOKENS)
+    return normalize_citations(reply)
+
+
+def normalize_citations(text: str) -> str:
+    """gpt-oss sometimes cites with full-width 【n】; unify to [n]."""
+    return re.sub(r"【\s*(\d+)\s*】", r"[\1]", text)

@@ -28,7 +28,7 @@ data/*.md ─► load + clean (NFC, PyThaiNLP normalize, ลบ zero-width) ─�
 
 คำถามผู้ใช้ ─► (ถ้ามีประวัติแชต) Groq เขียนคำถามใหม่ให้สมบูรณ์ ─► embed ("query: ...") ─► FAISS top-k
             ─► score สูงสุด < 0.83 ? ─► ตอบ "ไม่พบข้อมูลในเอกสาร" ทันที (ไม่เรียก LLM)
-            ─► มิฉะนั้น: System prompt + ประวัติ 4 รอบ + CONTEXT [1..k] ─► Groq llama-3.3-70b ─► คำตอบ + [n] อ้างอิง
+            ─► มิฉะนั้น: System prompt + ประวัติ 4 รอบ + CONTEXT [1..k] ─► Groq gpt-oss-120b ─► คำตอบ + [n] อ้างอิง
             ─► UI แสดงคำตอบ + expander "📚 เอกสารอ้างอิง" (ไฟล์, หัวข้อ, score, ข้อความ chunk)
 ```
 
@@ -39,7 +39,7 @@ data/*.md ─► load + clean (NFC, PyThaiNLP normalize, ลบ zero-width) ─�
 | Document Loading & Chunking | โหลดไฟล์ .md/.txt, แยก frontmatter (title/source), ทำความสะอาดข้อความด้วย Unicode NFC + `pythainlp.util.normalize` + ลบ zero-width/ช่องว่างซ้ำ, แบ่งตามหัวข้อ `##` ก่อน แล้วรวมบรรทัดเป็น chunk ≤ 500 ตัวอักษร พร้อม overlap 100 ตัวอักษร ส่วนบรรทัดที่ยาวเกินจะตัดด้วย `pythainlp.tokenize.sent_tokenize` | `rag/loader.py` |
 | Embedding & Vector Search | Sentence embedding ด้วย `intfloat/multilingual-e5-small` (รองรับไทยและอังกฤษ ขนาดเล็กพอสำหรับ Streamlit Cloud) ใส่ prefix `query:`/`passage:` และ normalize vector แล้วค้นด้วย FAISS `IndexFlatIP` (cosine similarity) | `rag/retriever.py` |
 | Prompt Engineering | System prompt กำหนดให้ตอบจาก CONTEXT เท่านั้น อ้างอิง `[n]` ตอบ "ไม่พบข้อมูลในเอกสาร" เมื่อไม่มีคำตอบ ตอบภาษาเดียวกับคำถาม และกัน prompt injection มี prompt เขียนคำถามใหม่ (query rewriting) สำหรับคำถามต่อเนื่อง และใช้ score threshold เป็นด่านแรก | `rag/prompts.py` |
-| Large Language Model | Groq API (`llama-3.3-70b-versatile`, สำรอง `llama-3.1-8b-instant`), temperature 0.1, จัดการ error เช่น rate limit, key ผิด, เชื่อมต่อไม่ได้ | `rag/llm.py` |
+| Large Language Model | Groq API (`openai/gpt-oss-120b`, สำรอง `openai/gpt-oss-20b` ซึ่งใช้เขียนคำถามใหม่ด้วย), temperature 0.1, reasoning_effort low, แปลง citation `【n】` เป็น `[n]`, จัดการ error เช่น rate limit, key ผิด, เชื่อมต่อไม่ได้ | `rag/llm.py` |
 | Chatbot Interface | `st.chat_message` / `st.chat_input` เก็บประวัติใน `st.session_state` คุยต่อเนื่องได้ ทุกคำตอบมี expander แสดงเอกสารอ้างอิง sidebar มีปุ่มคำถามตัวอย่าง ปรับ top-k เลือก model และล้างแชต | `app.py` |
 
 ---
@@ -159,7 +159,7 @@ User message ที่ส่งให้ LLM จะประกอบด้ว�
 | ตัวชี้วัด | ผล |
 |---|---|
 | Retrieval hit@4 (ไฟล์ที่ถูกต้องอยู่ใน 4 chunk แรก) | 10/10 (100%) |
-| ตอบ / ไม่พบข้อมูล ถูกต้อง | `<ใส่ผลจาก python eval.py>` |
+| ตอบ / ไม่พบข้อมูล ถูกต้อง (คำถามที่ไม่มีคำตอบ 3 ข้อตอบ "ไม่พบข้อมูลในเอกสาร" ครบ) | 13/13 (100%) |
 
 ## 9. ข้อจำกัด
 - ข้อมูลอ้างอิงปีภาษี 2567 กฎหมายและมาตรการลดหย่อนเปลี่ยนแปลงทุกปี
