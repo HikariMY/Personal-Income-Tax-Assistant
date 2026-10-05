@@ -7,7 +7,7 @@ from pathlib import Path
 import streamlit as st
 from groq import Groq
 
-from rag.llm import DEFAULT_MODEL, FALLBACK_MODEL, LLMError, answer, rewrite_query
+from rag.llm import AVAILABLE_MODELS, LLMError, answer, rewrite_query
 from rag.loader import build_chunks, load_documents
 from rag.prompts import NOT_FOUND
 from rag.retriever import SearchResult, VectorStore, load_embedder
@@ -75,7 +75,7 @@ def sidebar() -> tuple[int, str]:
         )
         st.caption("Embedding: multilingual-e5-small · Vector DB: FAISS · LLM: Groq")
         top_k = st.slider("จำนวนเอกสารอ้างอิง (top-k)", 1, 8, DEFAULT_TOP_K)
-        model = st.selectbox("LLM model", [DEFAULT_MODEL, FALLBACK_MODEL])
+        model = st.selectbox("LLM model", AVAILABLE_MODELS)
         st.subheader("คำถามตัวอย่าง")
         for q in EXAMPLE_QUESTIONS:
             if st.button(q, use_container_width=True):

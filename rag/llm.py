@@ -12,6 +12,8 @@ from rag.retriever import SearchResult
 
 DEFAULT_MODEL = "openai/gpt-oss-120b"
 FALLBACK_MODEL = "openai/gpt-oss-20b"
+# All scored 13/13 on test_questions.csv (2026-10-05); listed best-first for the UI.
+AVAILABLE_MODELS = (DEFAULT_MODEL, "qwen/qwen3.8-27b", FALLBACK_MODEL)
 ANSWER_TEMPERATURE = 0.1
 # gpt-oss models spend tokens on hidden reasoning first, so leave headroom.
 MAX_ANSWER_TOKENS = 4096
@@ -66,5 +68,6 @@ def answer(
 
 
 def normalize_citations(text: str) -> str:
-    """gpt-oss sometimes cites with full-width 【n】; unify to [n]."""
+    """Unify gpt-oss full-width 【n】 cites to [n]; drop any qwen <think> block."""
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
     return re.sub(r"【\s*(\d+)\s*】", r"[\1]", text)
