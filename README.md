@@ -2,8 +2,8 @@
 
 Web Application แชตบอตที่ตอบคำถามเรื่อง **ภาษีเงินได้บุคคลธรรมดาของไทย (ปีภาษี 2567)** จากคลังเอกสารความรู้ภาษาไทยและภาษาอังกฤษ ด้วยเทคนิค **RAG (Retrieval-Augmented Generation)** พัฒนาด้วย Streamlit และ deploy บน Streamlit Community Cloud
 
-- **Streamlit App:** `<ใส่ URL หลัง deploy>`
-- **GitHub:** `<ใส่ URL repository>`
+- **Streamlit App:** https://personal-income-tax-assistant-nlp.streamlit.app/
+- **GitHub:** https://github.com/HikariMY/Personal-Income-Tax-Assistant
 
 ---
 
